@@ -56,6 +56,28 @@ Jupyter notebooks for analzing data from the database can be found in the 'Jupyt
 
 Plugins allow the user to expand the types of data that are processed and stored in the database. GarminDb already has a number of plugins for handling data from third-party Connect IQ apps and data fields. Read more about plugins [here](https://github.com/tcgoetz/GarminDbPlugins).
 
+# Docker
+
+*This isn't yet hosted on DockerHub so you must build the image yourself.*
+
+Must clone using SSH (not HTTPS).
+
+Must run `make update` before building (which pulls the submodules on the *host*, since we don't load an SSH key in the image).
+
+`docker build -t garmindb .`
+
+Any config values from the GarminConnectConfig.json.example file can be loaded into the Docker container runtime using environment variables:
+
+`GARMINDB_<node>_<leaf>`
+
+Examples:
+
+`docker run garmindb -e GARMINDB_credentials_user=joe@shmoe.com -e GARMINDB_credentials_password=yourpassword -v healthdata:/root/HealthData/`
+
+By default the container does nothing. It simply has GarminDB installed for you to run commands with it.
+
+If setting up your data for the first time, after deploying the container you must run `make create_dbs` and otherwise follow the GarminDB setup instructions.
+
 # Success Stories
 
 Find out who's using GarminDb on what platforms, OSes, and python versions [here](https://github.com/tcgoetz/GarminDB/wiki/Success-Stories). If you're using GarminDB and your scenario isn't listed send me a message or file an issue with your success case.

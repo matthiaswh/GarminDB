@@ -37,11 +37,17 @@ class GarminConnectConfigManager(JsonConfig):
             sys.exit(-1)
 
     def __get_node_value(self, node, leaf):
+        val = os.environ.get(f'GARMINDB_{node}_{leaf}', None)
+        if val is not None:
+            return val
         node = self.config.get(node)
         if node is not None:
             return node.get(leaf)
 
     def __get_node_value_default(self, node, leaf, default):
+        val = os.environ.get(f'GARMINDB_{node}_{leaf}', None)
+        if val is not None:
+            return val
         node = self.config.get(node)
         if node is not None:
             return node.get(leaf, default)
