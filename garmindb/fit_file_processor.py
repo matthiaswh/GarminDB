@@ -18,10 +18,10 @@ logger.addHandler(logging.StreamHandler(stream=sys.stdout))
 root_logger = logging.getLogger()
 
 
-class FitFileProcessor(object):
+class FitFileProcessor():
     """Class that takes a parsed FIT file object and imports it into a database."""
 
-    def __init__(self, db_params, plugin_manager, debug=0):
+    def __init__(self, db_params, plugin_manager=None, debug=0):
         """
         Return a new FitFileProcessor instance.
 
@@ -126,24 +126,19 @@ class FitFileProcessor(object):
         timestamp = fit_file.utc_datetime_to_local(message_fields.timestamp)
         device_type = message_fields.get('device_type', fitfile.MainDeviceType.fitness_tracker)
         serial_number = message_fields.serial_number
-        manufacturer = Device.Manufacturer.convert(message_fields.manufacturer)
-        product = message_fields.product
         source_type = message_fields.source_type
         # local devices are part of the main device. Base missing fields off of the main device.
         if source_type is fitfile.field_enums.SourceType.local:
             if serial_number is None and self.serial_number is not None and device_type is not None:
                 serial_number = Device.local_device_serial_number(self.serial_number, device_type)
-            if manufacturer is None:
-                manufacturer = self.manufacturer
-            if product is None:
-                product = self.product
         if serial_number is not None:
+            manufacturer = Device.Manufacturer.convert(message_fields.manufacturer)
             device = {
                 'serial_number'     : serial_number,
                 'timestamp'         : timestamp,
                 'device_type'       : fitfile.field_enums.name_for_enum(device_type),
-                'manufacturer'      : manufacturer,
-                'product'           : fitfile.field_enums.name_for_enum(product),
+                'manufacturer'      : manufacturer or self.manufacturer,
+                'product'           : fitfile.field_enums.name_for_enum(message_fields.product or self.product),
                 'hardware_version'  : message_fields.hardware_version
             }
             Device.s_insert_or_update(self.garmin_db_session, device, ignore_none=True)
@@ -157,6 +152,7 @@ class FitFileProcessor(object):
                 'software_version'      : message_fields.software_version
             }
             DeviceInfo.s_insert_or_update(self.garmin_db_session, device_info, ignore_none=True)
+            return serial_number
 
     def _write_stress_level_entry(self, fit_file, message_fields):
         stress = {
@@ -203,7 +199,7 @@ class FitFileProcessor(object):
         for attribute_name in attribute_names:
             self._write_attribute(timestamp, message_fields, attribute_name)
 
-    def _write_measurement_ssytem_attributes(self, timestamp, message_fields):
+    def _write_measurement_sytem_attributes(self, timestamp, message_fields):
         for attribute_name in ['dist_setting', 'speed_setting', 'height_setting', 'temperature_setting']:
             self._write_attribute(timestamp, message_fields, attribute_name, 'measurement_system')
 
@@ -211,7 +207,7 @@ class FitFileProcessor(object):
         root_logger.debug("device settings message: %r", message_fields)
         timestamp = fit_file.time_created_local
         self._write_attributes(timestamp, message_fields, ['active_time_zone', 'date_mode'])
-        self._write_measurement_ssytem_attributes(timestamp, message_fields)
+        self._write_measurement_sytem_attributes(timestamp, message_fields)
         self._write_attribute(timestamp, message_fields, 'active_time_zone', 'time_zone')
         self._write_attribute(timestamp, message_fields, 'date_mode', 'date_format')
 
@@ -222,11 +218,11 @@ class FitFileProcessor(object):
         root_logger.debug("user profile message: %r", message_fields)
         timestamp = fit_file.time_created_local
         attribute_names = [
-            'gender', 'height', 'weight', 'language', 'dist_setting', 'weight_setting', 'position_setting', 'elev_setting', 'sleep_time', 'wake_time',
+            'gender', 'height', 'weight', 'age', 'year_of_birth', 'language', 'dist_setting', 'weight_setting', 'position_setting', 'elev_setting', 'sleep_time', 'wake_time',
             'speed_setting'
         ]
         self._write_attributes(timestamp, message_fields, attribute_names)
-        self._write_measurement_ssytem_attributes(timestamp, message_fields)
+        self._write_measurement_sytem_attributes(timestamp, message_fields)
 
     def _write_activity_entry(self, fit_file, message_fields):
         root_logger.debug("activity message: %r", message_fields)

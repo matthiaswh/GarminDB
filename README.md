@@ -1,29 +1,34 @@
-[![Screen shot of browsing the DB](https://raw.githubusercontent.com/tcgoetz/GarminDB/master/Screenshots/ScreenShot_browsing_sm.jpg)](https://github.com/tcgoetz/GarminDB/wiki/Screenshots)
+[![Screen shot of a daily graph](https://raw.githubusercontent.com/tcgoetz/GarminDB/master/Screenshots/Screen_Shot_jupyter_daily_sm.jpg)](https://github.com/tcgoetz/GarminDB/wiki/Screenshots)
 
-[![Screen shot of a daily graph](https://raw.githubusercontent.com/tcgoetz/GarminDB/master/Screenshots/Screen_Shot_daily_graph_sm.jpg)](https://github.com/tcgoetz/GarminDB/wiki/Screenshots)
+---
 
-[![Screen shot of a steps graph](https://raw.githubusercontent.com/tcgoetz/GarminDB/master/Screenshots/Screen_Shot_steps_graph_sm.jpg)](https://github.com/tcgoetz/GarminDB/wiki/Screenshots)
+[![Screen shot of an activity display](https://raw.githubusercontent.com/tcgoetz/GarminDB/master/Screenshots/Screen_Shot_activity_sm.jpg)](https://github.com/tcgoetz/GarminDB/wiki/Screenshots)
+
+---
+
+[![Screen shot of daily trend ](Screenshots/Screen_Shot_daily_trend.png)](https://github.com/tcgoetz/GarminDB/wiki/Screenshots)
+
 
 # GarminDB
 
-[Python](https://www.python.org/) scripts for parsing health data into and manipulating data in a [SQLite](http://sqlite.org/) database. SQLite is a light weight database that requires no server.
+[Python](https://www.python.org/) scripts for parsing health data into and manipulating data in a [SQLite](http://sqlite.org/) database. SQLite is a light weight database that doesn't require a server.
 
 What they can do:
 * Automatically download and import Garmin daily monitoring files (all day heart rate, activity, climb/descend, stress, and intensity minutes) from the user's Garmin Connect "Daily Summary" page.
 * Extract sleep, weight, and resting heart rate data from Garmin Connect, store it as JSON files, and import it into the DB.
 * Download and import activity files from Garmin Connect. A summary table for all activities and more detailed data for some activity types. Lap and record entries for activities.
-* Summarizing data into `stats.txt` and a common DB with tables containing daily summaries, weekly summaries, and monthly summaries.
+* Summarizing data into a DB with tables containing daily, weekly, monthly, and yearly summaries.
 * Graph your data from the commandline or with Jupyter notebooks.
-* Retain data as JSON files or FIT files so that the DB can be regenerated without connecting or redownloading data from Garmin Connect.
+* Retain downloaded JSON and FIT files so that the DB can be regenerated without connecting to or redownloading data from Garmin Connect.
 * Export activities as TCX files.
 
-Once you have your data in the DB, I recommend using a SQLite browser like [SQLite Studio](http://sqlitestudio.pl) or [DB Browser for SQLite](https://sqlitebrowser.org/) for browsing and working with the data. The scripts create some default [views](http://www.tutorialspoint.com/sqlite/sqlite_views.htm) in the DBs that make browsing the data easier.
+Once you have your data in the DB, I recommend using a supplied Jupyter notebooks, third party Jupyter notebooks, and/or SQLite browser like [SQLite Studio](http://sqlitestudio.pl) or [DB Browser for SQLite](https://sqlitebrowser.org/) for browsing and working with the data. The scripts create some default [views](http://www.tutorialspoint.com/sqlite/sqlite_views.htm) in the DBs that make browsing the data easier.
 
 # Using It
 
 ## Releases
 
-GarminDb releases are hosted on [PyPI](https://pypi.org/project/garmindb/). GarminDb requires [Python](https://www.python.org/). With Python installed, install the latest release with [pip](https://pypi.org/project/pip/) by running `pip install garmindb` in a terminal.
+GarminDb releases are hosted on [PyPI](https://pypi.org/project/garmindb/). GarminDb requires [Python](https://www.python.org/) 3.x. With Python installed, install the latest release with [pip](https://pypi.org/project/pip/) by running `pip install garmindb` in a terminal.
 * Copy `GarminConnectConfig.json.example` to `~/.GarminDb/GarminConnectConfig.json`, edit it, and add your Garmin Connect username and password and adjust the start dates to match the dats of your data in Garmin Connect.
 * Starting out: download all of your data and create your db by running `garmindb_cli.py --all --download --import --analyze` in a terminal.
 * Incrementally update your db by downloading the latest data and importing it by running `garmindb_cli.py --all --download --import --analyze --latest` in a terminal.
@@ -41,7 +46,11 @@ The scripts are automated with [Make](https://www.gnu.org/software/make/manual/m
 * Run `make create_dbs` once to fetch and process for you data.
 * Keep all of your local data up to date by periodically running only one command: `make`.
 
-There  is more help on [using the program](https://github.com/tcgoetz/GarminDB/wiki/Usage) in the wiki.
+There is more help on [using the program](https://github.com/tcgoetz/GarminDB/wiki/Usage) in the wiki.
+
+# Jupyter Notebooks #
+
+Jupyter notebooks for analzing data from the database can be found in the 'Jupyter' directory in the source tree. [Links](https://github.com/tcgoetz/GarminDB/wiki/Related-Projects#jupyter-notebooks) to user submitted notebooks can be found in the wiki.
 
 # Plugins #
 
@@ -60,9 +69,9 @@ Find out who's using GarminDb on what platforms, OSes, and python versions [here
 
 # Bugs and Debugging
 
-* If you have issues, file a bug here on the project. See the Issues tab at the top of the project page. Run `make bugreport` or `bugreport.sh` and include bugreport.txt in your bug report.
+* If you have issues, file a bug here on the project. See the Issues tab at the top of the project page. Run `make bugreport` or `garmindb_bug_report.py` and include bugreport.txt in your bug report.
 * Besides errors that appear on the screen, one of the first places to look for more information is the log files (garmin.log, graphs.log).
-* If your having issues with a particular data files, please considering sharing so I can debug it.
+* If your having issues with a particular data files, please considering sharing so I can debug it and add support.
 
 # Contributing
 

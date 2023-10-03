@@ -28,13 +28,14 @@ logger.addHandler(logging.StreamHandler(stream=sys.stdout))
 root_logger = logging.getLogger()
 
 
-class Download(object):
+class Download():
     """Class for downloading health data from Garmin Connect."""
 
     garmin_connect_base_url = "https://connect.garmin.com"
     garmin_connect_enus_url = garmin_connect_base_url + "/en-US"
 
     garmin_connect_sso_login = 'signin'
+    garmin_connect_mfa_login = 'verifyMFA/loginEnterMfaCode'
 
     garmin_connect_login_url = garmin_connect_enus_url + "/signin"
 
@@ -146,6 +147,17 @@ class Download(object):
         except RestException as e:
             root_logger.error("Exception during login post: %s", e)
             return False
+        mfa = re.search(r'performMFACheck\s*="(.*)"', response.text, re.M)
+        if mfa and mfa.group(1) == 'true':
+            logger.debug("MFA request found in (%s).", response.text)
+            data = {
+                'mfa-code' : input("Enter MFA code: "),
+                'embed'    : 'false',
+                '_csrf'    : found.group(1)
+            }
+            response = self.sso_rest_client.post(self.garmin_connect_mfa_login, post_headers, params, data)
+        else:
+            logger.debug("no MFA request found.")
         found = re.search(r"\?ticket=([\w-]*)", response.text, re.M)
         if not found:
             logger.error("Login ticket not found (%d).", response.status_code)
@@ -156,8 +168,8 @@ class Download(object):
         }
         try:
             response = self.modern_rest_client.get('', params=params)
-        except RestException:
-            logger.error("Login get homepage failed (%d).", response.status_code)
+        except RestException as e:
+            logger.error("Login get homepage failed (%d) %s.", response.status_code, e)
             RestClient.save_binary_file('login_home.html', response)
             return False
         self.user_prefs = self.__get_json(response.text, 'VIEWER_USERPREFERENCES')
@@ -203,11 +215,11 @@ class Download(object):
         try:
             self.modern_rest_client.download_json_file(url, json_filename, overwite, params)
         except RestException as e:
-            root_logger.error("Exception geting daily summary: %s", e)
+            root_logger.error("Exception getting daily summary: %s", e)
 
     def get_daily_summaries(self, directory_func, date, days, overwite):
         """Download the daily summary data from Garmin Connect and save to a JSON file."""
-        root_logger.info("Geting daily summaries: %s (%d)", date, days)
+        root_logger.info("Getting daily summaries: %s (%d)", date, days)
         self.__get_stat(self.__get_summary_day, directory_func, date, days, overwite)
 
     def __get_monitoring_day(self, date):
@@ -217,11 +229,11 @@ class Download(object):
         try:
             self.download_service_rest_client.download_binary_file(url, zip_filename)
         except RestException as e:
-            root_logger.error("Exception geting daily summary: %s", e)
+            root_logger.error("Exception getting daily summary: %s", e)
 
     def get_monitoring(self, directory_func, date, days):
         """Download the daily monitoring data from Garmin Connect, unzip and save the raw files."""
-        root_logger.info("Geting monitoring: %s (%d)", date, days)
+        root_logger.info("Getting monitoring: %s (%d)", date, days)
         for day in tqdm(range(0, days + 1), unit='days'):
             day_date = date + datetime.timedelta(day)
             self.temp_dir = tempfile.mkdtemp()
@@ -242,11 +254,11 @@ class Download(object):
         try:
             self.modern_rest_client.download_json_file(self.garmin_connect_weight_url, json_filename, overwite, params)
         except RestException as e:
-            root_logger.error("Exception geting daily summary: %s", e)
+            root_logger.error("Exception getting daily summary: %s", e)
 
     def get_weight(self, directory, date, days, overwite):
         """Download the sleep data from Garmin Connect and save to a JSON file."""
-        root_logger.info("Geting weight: %s (%d)", date, days)
+        root_logger.info("Getting weight: %s (%d)", date, days)
         self.__get_stat(self.__get_weight_day, directory, date, days, overwite)
 
     def __get_activity_summaries(self, start, count):
@@ -259,7 +271,7 @@ class Download(object):
             response = self.modern_rest_client.get(self.garmin_connect_activity_search_url, params=params)
             return response.json()
         except RestException as e:
-            root_logger.error("Exception geting activity summary: %s", e)
+            root_logger.error("Exception getting activity summary: %s", e)
 
     def __save_activity_details(self, directory, activity_id_str, overwite):
         root_logger.debug("save_activity_details")
@@ -267,7 +279,7 @@ class Download(object):
         try:
             self.activity_service_rest_client.download_json_file(activity_id_str, json_filename, overwite)
         except RestException as e:
-            root_logger.error("Exception geting daily summary %s", e)
+            root_logger.error("Exception getting daily summary %s", e)
 
     def __save_activity_file(self, activity_id_str):
         root_logger.debug("save_activity_file: %s", activity_id_str)
@@ -281,7 +293,7 @@ class Download(object):
     def get_activities(self, directory, count, overwite=False):
         """Download activities files from Garmin Connect and save the raw files."""
         self.temp_dir = tempfile.mkdtemp()
-        logger.info("Geting activities: '%s' (%d) temp %s", directory, count, self.temp_dir)
+        logger.info("Getting activities: '%s' (%d) temp %s", directory, count, self.temp_dir)
         activities = self.__get_activity_summaries(0, count)
         for activity in tqdm(activities or [], unit='activities'):
             activity_id_str = str(activity['activityId'])
@@ -305,7 +317,7 @@ class Download(object):
         try:
             self.activity_service_rest_client.download_json_file('activityTypes', json_filename, overwite)
         except RestException as e:
-            root_logger.error("Exception geting activity types: %s", e)
+            root_logger.error("Exception getting activity types: %s", e)
 
     def __get_sleep_day(self, directory, date, overwite=False):
         json_filename = f'{directory}/sleep_{date}'
@@ -317,11 +329,11 @@ class Download(object):
         try:
             self.modern_rest_client.download_json_file(url, json_filename, overwite, params)
         except RestException as e:
-            root_logger.error("Exception geting daily summary: %s", e)
+            root_logger.error("Exception getting daily summary: %s", e)
 
     def get_sleep(self, directory, date, days, overwite):
         """Download the sleep data from Garmin Connect and save to a JSON file."""
-        root_logger.info("Geting sleep: %s (%d)", date, days)
+        root_logger.info("Getting sleep: %s (%d)", date, days)
         self.__get_stat(self.__get_sleep_day, directory, date, days, overwite)
 
     def __get_rhr_day(self, directory, day, overwite=False):
@@ -336,11 +348,11 @@ class Download(object):
         try:
             self.modern_rest_client.download_json_file(url, json_filename, overwite, params)
         except RestException as e:
-            root_logger.error("Exception geting daily summary %s", e)
+            root_logger.error("Exception getting daily summary %s", e)
 
     def get_rhr(self, directory, date, days, overwite):
         """Download the resting heart rate data from Garmin Connect and save to a JSON file."""
-        root_logger.info("Geting rhr: %s (%d)", date, days)
+        root_logger.info("Getting rhr: %s (%d)", date, days)
         self.__get_stat(self.__get_rhr_day, directory, date, days, overwite)
 
     def __get_hydration_day(self, directory_func, day, overwite=False):
@@ -350,9 +362,9 @@ class Download(object):
         try:
             self.modern_rest_client.download_json_file(url, json_filename, overwite)
         except RestException as e:
-            root_logger.error("Exception geting hydration: %s", e)
+            root_logger.error("Exception getting hydration: %s", e)
 
     def get_hydration(self, directory_func, date, days, overwite):
         """Download the hydration data from Garmin Connect and save to a JSON file."""
-        root_logger.info("Geting hydration: %s (%d)", date, days)
+        root_logger.info("Getting hydration: %s (%d)", date, days)
         self.__get_stat(self.__get_hydration_day, directory_func, date, days, overwite)

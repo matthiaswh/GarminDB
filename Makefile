@@ -1,11 +1,15 @@
 #
-# This Makefile handles downloading data from Garmin Connect and generating SQLite DB files from that data. The Makefile targets handle the dependaancies
-# between downloading and geenrating varies types of data. It wraps the core Python scripts and runs them with appropriate parameters.
+# This Makefile handles downloading data from Garmin Connect and generating SQLite DB files from that data. The Makefile targets handle the dependancies
+# between downloading and generating varies types of data. It wraps the core Python scripts and runs them with appropriate parameters.
 #
 export PROJECT_BASE=$(CURDIR)
 
 include defines.mk
 
+$(info $$PROJECT_BASE is [${PROJECT_BASE}])
+$(info $$PLATFORM is [${PLATFORM}])
+$(info $$SHELL is [${SHELL}])
+$(info $$PIP_PATH is [${PIP_PATH}])
 
 #
 # Master targets
@@ -52,12 +56,20 @@ $(CONF_DIR):
 $(CONF_DIR)/GarminConnectConfig.json: $(CONF_DIR)
 	cp $(PROJECT_BASE)/garmindb/GarminConnectConfig.json.example $(CONF_DIR)/GarminConnectConfig.json
 
-$(PROJECT_BASE)/.venv:
-	$(PYTHON) -m venv --upgrade-deps $(PROJECT_BASE)/.venv
+activate_venv: $(PROJECT_BASE)/.venv
 	source $(PROJECT_BASE)/.venv/bin/activate
 
+update_venv:
+	$(PROJECT_BASE)/.venv/bin/python -m pip install --upgrade pip
+
+$(PROJECT_BASE)/.venv:
+	$(PYTHON) -m venv --upgrade-deps $(PROJECT_BASE)/.venv
+
+clean_venv:
+	rm -rf $(PROJECT_BASE)/.venv
+
 update: submodules_update
-	git pull --rebase
+	git pull
 
 submodules_update:
 	git submodule init
@@ -80,10 +92,12 @@ $(PROJECT_BASE)/dist/$(MODULE)-*.whl: build
 install: $(PROJECT_BASE)/dist/$(MODULE)-*.whl
 	$(PIP) install --upgrade $(PROJECT_BASE)/dist/$(MODULE)-*.whl
 
-reinstall: $(PROJECT_BASE)/dist/$(MODULE)-*.whl
+install_all: $(SUBMODULES:%=%-install) install
+
+reinstall: clean $(PROJECT_BASE)/dist/$(MODULE)-*.whl
 	$(PIP) install --upgrade --force-reinstall --no-deps $(PROJECT_BASE)/dist/$(MODULE)-*.whl
 
-install_all: $(SUBMODULES:%=%-install) install
+reinstall_all: clean uninstall_all install_all
 
 $(SUBMODULES:%=%-uninstall):
 	$(MAKE) -C $(subst -uninstall,,$@) uninstall
@@ -93,19 +107,27 @@ uninstall:
 
 uninstall_all: uninstall $(SUBMODULES:%=%-uninstall)
 
-reinstall_all: uninstall_all install_all
-
 republish_plugins:
 	$(MAKE) -C Plugins republish_plugins
 
 $(SUBMODULES:%=%-deps):
 	$(MAKE) -C $(subst -deps,,$@) deps
 
-pip_upgrade:
-	$(PIP) install --upgrade pip
+requirements.txt:
+	$(PIP) freeze -r requirements.in > requirements.txt
 
-deps: pip_upgrade $(SUBMODULES:%=%-deps)
+dev-requirements.txt:
+	$(PIP) freeze -r dev-requirements.in > dev-requirements.txt
+
+Jupyter/requirements.txt:
+	$(PIP) freeze -r Jupyter/requirements.in > Jupyter/requirements.txt
+
+update_pip_packages:
+	$(PIP) list --outdated | egrep -v "Package|---" |   cut -d' ' -f1 | xargs pip install --upgrade
+
+deps: $(SUBMODULES:%=%-deps)
 	$(PIP) install --upgrade --requirement requirements.txt
+	$(PIP) install --upgrade --requirement Jupyter/requirements.txt
 
 $(SUBMODULES:%=%-devdeps):
 	$(MAKE) -C $(subst -devdeps,,$@) devdeps
@@ -119,6 +141,7 @@ $(SUBMODULES:%=%-remove_deps):
 remove_deps: $(SUBMODULES:%=%-remove_deps)
 	$(PIP) uninstall -y --requirement requirements.txt
 	$(PIP) uninstall -y --requirement dev-requirements.txt
+	$(PIP) uninstall -y --requirement Jupyter/requirements.txt
 
 clean_deps: remove_deps
 
@@ -132,21 +155,23 @@ $(SUBDIRS:%=%-clean):
 clean: $(SUBMODULES:%=%-clean) $(SUBDIRS:%=%-clean) test_clean
 	rm -f *.pyc
 	rm -f *.log
+	rm -f scripts/*.log
+	rm -f Jupyter/*.log
 	rm -f *.spec
 	rm -f *.zip
 	rm -f *.png
-	rm -f ms_stats.txt
-	rm -f stats.txt
+	rm -f *stats.txt
+	rm -f scripts/*stats.txt
+	rm -f Jupyter/*stats.txt
 	rm -rf __pycache__
 	rm -rf *.egg-info
 	rm -rf build
 	rm -rf dist
 
+realclean: clean clean_venv
+
 graphs:
 	garmindb_graphs.py --all
-
-graph_yesterday:
-	garmindb_graphs.py --day $(YESTERDAY)
 
 checkup: update_garmin
 	garmindb_checkup.py --battery
@@ -154,13 +179,16 @@ checkup: update_garmin
 
 # define CHECKUP_COURSE_ID in my-defines.mk
 checkup_course:
-	garmin_heckup.py --course $(CHECKUP_COURSE_ID)
+	garmin_checkup.py --course $(CHECKUP_COURSE_ID)
 
 daily: all checkup graph_yesterday
 
 #
 # Garmin targets
 #
+backup:
+	garmindb_cli.py --backup
+
 download_all_garmin:
 	garmindb_cli.py --all --download
 
@@ -190,6 +218,9 @@ copy_garmin:
 
 update_garmin:
 	garmindb_cli.py --all --download --import --analyze --latest
+
+update_garmin_activities:
+	garmindb_cli.py --activities --download --import --analyze --latest
 
 copy_garmin_latest:
 	garmindb_cli.py --all --copy --import --analyze --latest
@@ -270,7 +301,7 @@ flake8: $(SUBMODULES:%=%-flake8)
 	$(PYTHON) -m flake8 garmindb/*.py garmindb/garmindb/*.py garmindb/summarydb/*.py garmindb/fitbitdb/*.py garmindb/mshealthdb/*.py --max-line-length=180 --ignore=E203,E221,E241,W503
 
 regression_test_run: flake8 rebuild_dbs
-	grep ERROR garmin.log || [ $$? -eq 1 ]
+	grep ERROR garmindb.log || [ $$? -eq 1 ]
 
 regression_test: clean regression_test_run test
 

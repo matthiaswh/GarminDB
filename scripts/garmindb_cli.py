@@ -24,8 +24,9 @@ from garmindb.garmindb import GarminDb, Attributes, Sleep, Weight, RestingHeartR
 from garmindb.summarydb import SummaryDb
 
 from garmindb import Download, Copy, Analyze
-from garmindb import FitFileProcessor, ActivityFitFileProcessor, MonitoringFitFileProcessor
-from garmindb import GarminProfile, GarminWeightData, GarminSummaryData, GarminMonitoringFitData, GarminSleepData, GarminRhrData, GarminSettingsFitData, GarminHydrationData
+from garmindb import FitFileProcessor, ActivityFitFileProcessor, MonitoringFitFileProcessor, SleepFitFileProcessor
+from garmindb import GarminProfile, GarminWeightData, GarminSummaryData, GarminMonitoringFitData, GarminSleepFitData, GarminSleepData, GarminRhrData, GarminSettingsFitData, \
+    GarminHydrationData
 from garmindb import GarminJsonSummaryData, GarminJsonDetailsData, GarminTcxData, GarminActivitiesFitData
 from garmindb import ActivityExporter
 
@@ -179,8 +180,8 @@ def import_data(debug, latest, stats):
         if gwd.file_count() > 0:
             gwd.process()
 
+    monitoring_dir = ConfigManager.get_or_create_monitoring_base_dir()
     if Statistics.monitoring in stats:
-        monitoring_dir = ConfigManager.get_or_create_monitoring_base_dir()
         gsd = GarminSummaryData(db_params_dict, monitoring_dir, latest, measurement_system, debug)
         if gsd.file_count() > 0:
             gsd.process()
@@ -194,10 +195,15 @@ def import_data(debug, latest, stats):
             gfd.process_files(MonitoringFitFileProcessor(db_params_dict, plugin_manager, debug))
 
     if Statistics.sleep in stats:
+        # If we have sleep data from Garmin connect, use it, otherwise process FIT sleep files.
         sleep_dir = ConfigManager.get_or_create_sleep_dir()
         gsd = GarminSleepData(db_params_dict, sleep_dir, latest, debug)
         if gsd.file_count() > 0:
             gsd.process()
+        else:
+            gsd = GarminSleepFitData(monitoring_dir, latest=False, measurement_system=measurement_system, debug=2)
+            if gsd.file_count() > 0:
+                gsd.process_files(SleepFitFileProcessor(db_params_dict))
 
     if Statistics.rhr in stats:
         rhr_dir = ConfigManager.get_or_create_rhr_dir()
@@ -229,7 +235,6 @@ def analyze_data(debug):
     """Analyze the downloaded and imported Garmin data and create summary tables."""
     logger.info("___Analyzing Data___")
     analyze = Analyze(db_params_dict, debug - 1)
-    analyze.get_stats()
     analyze.summary()
     analyze.create_dynamic_views()
 
@@ -244,10 +249,8 @@ def backup_dbs():
             backupzip.write(db)
 
 
-def delete_dbs(delete_db_list=[]):
-    """Delete selected, or all if none selected GarminDb, database files."""
-    if len(delete_db_list) == 0:
-        delete_db_list = [GarminDb, MonitoringDb, ActivitiesDb, GarminSummaryDb, SummaryDb]
+def delete_dbs(delete_db_list=[GarminDb, MonitoringDb, ActivitiesDb, GarminSummaryDb, SummaryDb]):
+    """Delete selected database files, or all if none selected."""
     for db in delete_db_list:
         db.delete_db(db_params_dict)
 
@@ -283,7 +286,7 @@ def main(argv):
     parser.add_argument("-v", "--version", help="print the program's version", action='version', version=format_version(sys.argv[0]))
     parser.add_argument("-t", "--trace", help="Turn on debug tracing", type=int, default=0)
     modes_group = parser.add_argument_group('Modes')
-    modes_group.add_argument("-b", "--backup", help="Backup the databse files.", dest='backup_dbs', action="store_true", default=False)
+    modes_group.add_argument("-b", "--backup", help="Backup the database files.", dest='backup_dbs', action="store_true", default=False)
     modes_group.add_argument("-d", "--download", help="Download data from Garmin Connect for the chosen stats.", dest='download_data', action="store_true", default=False)
     modes_group.add_argument("-c", "--copy", help="copy data from a connected device", dest='copy_data', action="store_true", default=False)
     modes_group.add_argument("-i", "--import", help="Import data for the chosen stats", dest='import_data', action="store_true", default=False)

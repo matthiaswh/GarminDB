@@ -9,6 +9,7 @@ import logging
 import tempfile
 
 from idbutils import DbParams
+from fitfile import Sport
 
 from .config import Config
 
@@ -250,8 +251,18 @@ class ConfigManager(Config):
         return cls.graphs.get(key)
 
     @classmethod
+    def get_maps(cls, key):
+        """Return a map config item."""
+        return cls.maps.get(key)
+
+    @classmethod
     def graphs_activity_config(cls, activity, key):
         """Return a config value for the graphing capability given it's key name."""
         activity = cls.graphs.get(activity)
         if activity is not None:
             return activity.get(key)
+
+    @classmethod
+    def default_display_activities(cls):
+        """Return a list of the default activities to display."""
+        return [Sport.strict_from_string(activity) for activity in super().default_display_activities]
