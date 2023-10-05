@@ -10,7 +10,8 @@ RUN mkdir ~/.ssh
 RUN ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
 
 COPY . .
-COPY GarminConnectConfig.json.example GarminConnectConfig.json
+RUN mkdir /root/.GarminDb
+COPY garmindb/GarminConnectConfig.json.example /root/.GarminDb/GarminConnectConfig.json
 
 # This isn't really ideal since Docker can't cache this intermediate step
 RUN make deps
