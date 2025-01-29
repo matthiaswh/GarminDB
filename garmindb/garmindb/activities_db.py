@@ -98,7 +98,7 @@ class Activities(ActivitiesDb.Base, ActivitiesCommon):
     __tablename__ = 'activities'
 
     db = ActivitiesDb
-    table_version = 4
+    table_version = 5
 
     activity_id = Column(String, primary_key=True)
     name = Column(String)
@@ -108,6 +108,13 @@ class Activities(ActivitiesDb.Base, ActivitiesCommon):
     laps = Column(Integer)
     sport = Column(String)
     sub_sport = Column(String)
+
+    device_serial_number = Column(Integer)
+
+    self_eval_feel = Column(String)
+    self_eval_effort = Column(String)
+
+    training_load = Column(Float)
 
     training_effect = Column(Float)
     anaerobic_training_effect = Column(Float)

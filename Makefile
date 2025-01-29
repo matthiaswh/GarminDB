@@ -19,7 +19,7 @@ all: update_dbs
 # install all needed code
 setup_repo: $(CONF_DIR)/GarminConnectConfig.json $(PROJECT_BASE)/.venv submodules_update
 
-setup_install: deps devdeps install_all
+setup_install: version_check deps devdeps install_all
 
 setup: setup_repo setup_install
 
@@ -67,6 +67,9 @@ $(PROJECT_BASE)/.venv:
 
 clean_venv:
 	rm -rf $(PROJECT_BASE)/.venv
+
+version_check:
+	python -c 'import sys; import garmindb.version; garmindb.version.python_dev_version_check(sys.argv[0])'
 
 update: submodules_update
 	git pull
@@ -146,7 +149,10 @@ $(SUBMODULES:%=%-devdeps):
 devdeps: $(SUBMODULES:%=%-devdeps)
 	$(PIP) install --upgrade --requirement dev-requirements.txt
 
-jupiterdeps:
+graphdeps:
+	$(PIP) install --upgrade --requirement Jupyter/requirements_graphs.txt
+
+jupiterdeps: graphdeps
 	$(PIP) install --upgrade --requirement Jupyter/requirements.txt
 
 alldeps: update_pip_packages deps devdeps jupiterdeps
@@ -329,4 +335,8 @@ regression_test: clean regression_test_run test
 bugreport:
 	./bugreport.sh
 
-.PHONY: all setup install install_all uninstall uninstall_all update deps create_dbs rebuild_dbs update_dbs clean clean_dbs test zip_packages release clean test test_clean daily flake8 $(SUBMODULES:%=%-flake8)
+
+merge_develop:
+	git fetch --all && git merge remotes/origin/develop
+
+.PHONY: all setup install install_all uninstall uninstall_all update deps create_dbs rebuild_dbs update_dbs clean clean_dbs test zip_packages release clean test test_clean daily flake8 $(SUBMODULES:%=%-flake8) merge_develop

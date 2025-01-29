@@ -20,7 +20,6 @@ from tqdm import tqdm
 import fitfile.conversions as conversions
 
 from .garmin_connect_config_manager import GarminConnectConfigManager
-from .config_manager import ConfigManager
 
 
 logger = logging.getLogger(__file__)
@@ -54,7 +53,7 @@ class Download():
         """Create a new Download class instance."""
         logger.debug("__init__")
         self.gc_config = GarminConnectConfigManager()
-        self.garth_session_file = ConfigManager.get_session_file()
+        self.garth_session_file = self.gc_config.get_session_file()
         self.garth = GarthClient()
         self.garth.configure(domain=self.gc_config.get_garmin_base_domain())
 
@@ -94,7 +93,7 @@ class Download():
         except GarthException:
             self.__login()
 
-        profile_dir = ConfigManager.get_or_create_fit_files_dir()
+        profile_dir = self.gc_config.get_fit_files_dir()
         self.save_json_to_file(f'{profile_dir}/social-profile', self.garth.profile)
         self.save_json_to_file(f'{profile_dir}/user-settings', self.garth.connectapi(f'{self.garmin_connect_user_profile_url}/user-settings'), True)
         self.save_json_to_file(f'{profile_dir}/personal-information', self.garth.connectapi(f'{self.garmin_connect_user_profile_url}/personal-information'), True)
@@ -127,7 +126,7 @@ class Download():
         full_filename = f'{filename}.json'
         exists = os.path.isfile(full_filename)
         if not exists or overwite:
-            logger.info("%s %s", 'Overwriting' if exists else 'Saving', full_filename)
+            logger.debug("%s %s", 'Overwriting' if exists else 'Saving', full_filename)
             with open(full_filename, 'w') as file:
                 file.write(json.dumps(json_data, default=cls.__convert_to_json))
 
@@ -135,7 +134,7 @@ class Download():
         """Save binary data to a file."""
         exists = os.path.isfile(filename)
         if not exists or overwite:
-            logger.info("%s %s", 'Overwriting' if exists else 'Saving', filename)
+            logger.debug("%s %s", 'Overwriting' if exists else 'Saving', filename)
             response = self.garth.get("connectapi", url, api=True)
             with open(filename, 'wb') as file:
                 for chunk in response:
@@ -244,10 +243,10 @@ class Download():
         activities = self.__get_activity_summaries(0, count)
         for activity in tqdm(activities or [], unit='activities'):
             activity_id_str = str(activity['activityId'])
-            activity_name_str = conversions.printable(activity['activityName'])
+            activity_name_str = conversions.printable(activity.get('activityName'))
             root_logger.info("get_activities: %s (%s)", activity_name_str, activity_id_str)
-            json_filename = f'{directory}/activity_{activity_id_str}.json'
-            if not os.path.isfile(json_filename) or overwite:
+            json_filename = f'{directory}/activity_{activity_id_str}'
+            if not os.path.isfile(json_filename + '.json') or overwite:
                 root_logger.info("get_activities: %s <- %r", json_filename, activity)
                 self.__save_activity_details(directory, activity_id_str, overwite)
                 self.save_json_to_file(json_filename, activity)

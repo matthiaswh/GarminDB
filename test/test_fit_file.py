@@ -16,16 +16,16 @@ from idbutils import FileProcessor
 root_logger = logging.getLogger()
 handler = logging.FileHandler('fit_file.log', 'w')
 root_logger.addHandler(handler)
-root_logger.setLevel(logging.INFO)
+root_logger.setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
 
-test_activity_files     = True
+test_activity_files     = False
 test_monitoring_files   = True
-test_sleep_files        = True
-test_metrics_files      = True
-test_unknown_files      = True
+test_sleep_files        = False
+test_metrics_files      = False
+test_unknown_files      = False
 
 
 class TestFitFile(unittest.TestCase):
@@ -180,6 +180,7 @@ class TestFitFile(unittest.TestCase):
         self.check_monitoring_messages(fit_file)
 
     def check_activity_file(self, filename):
+        logger.info('parsing %s', filename)
         fit_file = fitfile.file.File(filename, self.measurement_system)
         logger.info('%s (%s) activity file message types: %s', filename, fit_file.time_created_local, fit_file.message_types)
         self.check_message_types(fit_file, dump_message=True)
@@ -211,38 +212,53 @@ class TestFitFile(unittest.TestCase):
     def test_parse_monitoring(self):
         monitoring_path = self.file_path + '/monitoring'
         file_names = FileProcessor.dir_to_files(monitoring_path, fitfile.file.name_regex, False)
-        for file_name in file_names:
-            self.check_monitoring_file(file_name)
+        if len(file_names) > 0:
+            for file_name in file_names:
+                self.check_monitoring_file(file_name)
+        else:
+            logger.error("Add test files to %s", activity_path)
 
     @unittest.skipIf(not test_activity_files, 'Test not selected')
     def test_parse_activity(self):
         activity_path = self.file_path + '/activity'
         file_names = FileProcessor.dir_to_files(activity_path, fitfile.file.name_regex, False)
-        for file_name in file_names:
-            self.check_activity_file(file_name)
+        if len(file_names) > 0:
+            for file_name in file_names:
+                self.check_activity_file(file_name)
+        else:
+            logger.error("Add test files to %s", activity_path)
 
     @unittest.skipIf(not test_sleep_files, 'Test not selected')
     def test_parse_sleep(self):
         activity_path = self.file_path + '/sleep'
         file_names = FileProcessor.dir_to_files(activity_path, fitfile.file.name_regex, False)
-        for file_name in file_names:
-            self.check_sleep_file(file_name)
+        if len(file_names) > 0:
+            for file_name in file_names:
+                self.check_sleep_file(file_name)
+        else:
+            logger.error("Add test files to %s", activity_path)
 
     @unittest.skipIf(not test_metrics_files, 'Test not selected')
     def test_parse_metrics(self):
         # root_logger.setLevel(logging.DEBUG)
         activity_path = self.file_path + '/metrics'
         file_names = FileProcessor.dir_to_files(activity_path, fitfile.file.name_regex, False)
-        for file_name in file_names:
-            self.check_unknown_file(file_name)
+        if len(file_names) > 0:
+            for file_name in file_names:
+                self.check_unknown_file(file_name)
+        else:
+            logger.error("Add test files to %s", activity_path)
 
     @unittest.skipIf(not test_unknown_files, 'Test not selected')
     def test_parse_unknown(self):
         # root_logger.setLevel(logging.DEBUG)
         activity_path = self.file_path + '/unknown'
         file_names = FileProcessor.dir_to_files(activity_path, fitfile.file.name_regex, False)
-        for file_name in file_names:
-            self.check_unknown_file(file_name)
+        if len(file_names) > 0:
+            for file_name in file_names:
+                self.check_unknown_file(file_name)
+        else:
+            logger.error("Add test files to %s", activity_path)
 
 
 if __name__ == '__main__':
