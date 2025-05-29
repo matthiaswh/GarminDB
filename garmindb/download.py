@@ -72,6 +72,7 @@ class Download():
 
     def __login(self):
         username = self.gc_config.get_user()
+        print('username: ', username)
         password = self.gc_config.get_password()
         if not username or not password:
             print("Missing config: need username and password. Edit GarminConnectConfig.json.")

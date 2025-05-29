@@ -15,3 +15,6 @@ COPY garmindb/GarminConnectConfig.json.example /root/.GarminDb/GarminConnectConf
 
 # This isn't really ideal since Docker can't cache this intermediate step
 RUN make deps
+# garmindb (somehow) installs itself in a venv, which doesn't get passed the env vars we send from Docker
+# Since we're copying the source anyway, just install editable, which should give what we need.
+RUN pip install -e .
