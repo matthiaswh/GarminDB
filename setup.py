@@ -10,7 +10,7 @@ def get_version(version_file):
     print(f"Loading version from {version_file} in {os.getcwd()}")
     with open(version_file, 'r') as file:
         data = file.read()
-        match = re.search(r'version_info = \((\d), (\d), (\d)\)', data, re.M)
+        match = re.search(r'version_info = \((\d+), (\d+), (\d+)\)', data, re.M)
         if match:
             return f'{match.group(1)}.{match.group(2)}.{match.group(3)}'
 
@@ -39,7 +39,7 @@ print(f"Building {module_name} {module_version}")
 
 setup(name=module_name, version=module_version, author='Tom Goetz',
       packages=[module_name, f'{module_name}.garmindb', f'{module_name}.fitbitdb', f'{module_name}.mshealthdb', f'{module_name}.summarydb'],
-      scripts=['scripts/garmindb_cli.py', 'scripts/garmindb_graphs.py', 'scripts/garmindb_checkup.py', 'scripts/garmindb_bug_report.py', 'scripts/fitbit.py', 'scripts/mshealth.py'],
+      scripts=['scripts/garmindb_cli.py', 'scripts/garmindb_checkup.py', 'scripts/garmindb_bug_report.py', 'scripts/fitbit.py', 'scripts/mshealth.py'],
       description='Download data from Garmin Connect and store it in a SQLite db for analysis.',
       long_description=module_long_description,
       long_description_content_type='text/markdown',
